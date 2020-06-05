@@ -1,2 +1,9 @@
-# Undulator-Synchrotron-Radiation-Maths
-Synchotron radiation maths 
+#### Web application Undulator-Synchrotron-Radiation-Maths
+Rest API to Synchotron radiation maths from undulator
+@author: lucas.balthazar
+
+# Magnet-Inductance-Tests
+> - Describe with practical applications for calculating machine parameters and synchrotron radiation from undulator light sources.
+
+> - Rest API Web application with dynamics parts. 
+    
