@@ -1,9 +1,16 @@
+import os
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import dash_core_components as dcc
 import dash_html_components as html
+import matplotlib.pyplot as plt
+from matplotlib.pyplot import figure
+from plotly.subplots import make_subplots
 from scipy.special import jv
+import reportfiles
+
+##_rr = reportfiles.ReportCreator()
 
 class manupilation_data(object):
     def __init__(self):
@@ -86,7 +93,7 @@ class manupilation_data(object):
 
         return html.Div([
             html.Table([
-                html.Tr([html.Td(html.H6('Relative particle energy (eV)')), html.Td(np.format_float_scientific(np.float32(self.relative_energy)))]),
+                html.Tr([html.Td(html.H6('Relative particle energy')), html.Td(np.format_float_scientific(np.float32(self.relative_energy)))]),
                 html.Tr([html.Td(html.H6('Emission angle (rad)')), html.Td(np.format_float_scientific(np.float32(self.emission_angle)))]),
                 html.Tr([html.Td(html.H6('Emittance horizontal x (m.rad)')), html.Td(np.format_float_scientific(np.float32(self.emittance_horizontal_x)))]),
                 html.Tr([html.Td(html.H6('Emittance vertical y (m.rad)')), html.Td(np.format_float_scientific(np.float32(self.emittance_vertical_y)))]),
@@ -171,7 +178,7 @@ class manupilation_data(object):
                 
                 ], style={'width': '50%', 'border': '2px solid grey', 'display': 'inline-block'}),
 
-            html.Table([ # Rigth Table
+            html.Table([ # Right Table
                 html.Tr([html.Td(dcc.Markdown('''**Undulator source size n=1 [m]**''')), html.Td(np.format_float_scientific(np.float32(self.undu_size_n1)))]),
                 html.Tr([html.Td(dcc.Markdown('''**Undulator source divergence n=1 [m]**''')), html.Td(np.format_float_scientific(np.float32(self.undu_divergence_n1)))]),
                 html.Tr([html.Td(dcc.Markdown('''**Photon beam sizes x, n=1 [m]**''')), html.Td(np.format_float_scientific(np.float32(self.effec_size_x)))]),
@@ -242,8 +249,9 @@ class manupilation_data(object):
         ])
 
 
-    def type_plot(self, value='Bright', ran=[0,20]):
+    def type_plot(self, value='Bright', ran=[0,20], typ='log'):
         '''Plot Bright or Flux as a fuction of photon energy'''
+        plt.figure(figsize=(5,2))
         _K_array = np.array([5.89, 5.59, 5.30, 5.00, 4.71, 4.42, 4.12, 3.83, 3.53, 3.24, 2.94, 2.65, 2.36, 2.06, 1.77, 1.47, 1.18, 0.88, 0.59, 0.29])
         _odd_harmonics = np.array([1, 3, 5, 7, 9, 11, 13, 15])
         _odd_waves = np.array([])
@@ -305,9 +313,20 @@ class manupilation_data(object):
 
         fig = go.Figure()
         for i in range(8):
+            # Plotly plot
             fig.add_trace(go.Scatter(x=_odd_energies_splited[i], y=array[i],
                                  mode='lines+markers',
                                  name=harms_legs[i]))
+
+            # Matplotlib plot for save
+            plt.plot(_odd_energies_splited[i], array[i], '-o', label=harms_legs[i])
+        plt.title("The " +str(value)+" as a function of photon energy")
+        plt.xlabel('Photon energy (KeV)')
+        plt.ylabel(texto)
+        plt.grid('True', alpha=0.3)
+        plt.yscale(str(typ))
+
+        file_save = plt.savefig(os.path.dirname(os.path.abspath(__file__))+"//images//graph.png")
             
         fig.update_layout(
         title=go.layout.Title(
@@ -328,7 +347,7 @@ class manupilation_data(object):
         ),
         fig.update_layout(
             yaxis = dict(
-                type = 'log',
+                type = str(typ),
                 showexponent = 'all',
                 exponentformat = 'E'
                 ),
@@ -337,4 +356,96 @@ class manupilation_data(object):
                 range=ran
                 )
             )
+
         return fig
+
+    def beam_stay_clear(self, A_B, axis):
+        self._s = np.arange(0,3,0.1)              #Electron positions from center
+        Bx = np.array([17.779, 1.357, 1.357])     #BetaX = Beta oscillations from X axis
+        By = np.array([3.566, 1.600])             #BetaY = Beta oscillations from Y axis
+        BSCx = np.array([11.5, 3.2])              #BSCx = Beam Stay-Clear from X
+        BSCy = np.array([2.9, 1.9])               #BSCy = Beam Stay-Clear from Y
+
+        Beta_s = lambda b, s: b+(s**2/b)
+        BCS_s = lambda bsc, b, Beta_s: np.sqrt((Beta_s/b))*bsc
+
+        result_beta_s = np.array([])
+        result_BCS = np.array([])
+        if (A_B == 'A') and (axis == 'x'):   #High Beta and X-axis
+            beta_zero = Bx[0]
+            BStayClear = BSCx[0]
+            
+        elif (A_B == 'B') and (axis == 'x'): #Low Beta and X-axis
+            beta_zero = Bx[1]
+            BStayClear = BSCx[1]
+            
+        elif (A_B == 'A') and (axis == 'y'): #High Beta and Y-axis
+            beta_zero = By[0]
+            BStayClear = BSCy[0]
+        
+        elif (A_B == 'B') and (axis == 'y'): #Low Beta and Y-axis
+            beta_zero = By[1]
+            BStayClear = BSCy[1]
+         
+        for i in range(len(self._s)):
+                result_beta_s = np.append(result_beta_s, Beta_s(beta_zero, self._s[i]))
+                result_BCS = np.append(result_BCS, BCS_s(BStayClear, beta_zero, result_beta_s[i]))
+            
+        return result_BCS
+
+    def plot_BSC(self):
+        fig = make_subplots(rows=2, cols=2, subplot_titles=("High Beta SS", "High Beta SS", "Low Beta SS", "Low Beta SS")
+                            )
+        self._s = np.arange(0,3,0.1)
+        A_B = ['A', 'B']
+        axis = ['x', 'y']
+        colors = ['darkblue', 'salmon']
+        Y_names = ['Horizontal', 'Vertical']
+        line_names = ['High Beta', 'Low Beta']
+        
+        for i in range(1,3): #n row
+            for j in range(1,3): #n column
+                fig.add_trace(
+                    go.Scatter(x=self._s, y=self.beam_stay_clear(A_B[i-1], axis[j-1]), marker_color=colors[i-1], name=line_names[i-1]),
+                               row=i, col=j)
+                fig.update_xaxes(title_text="Electron positions from center [m]", row=i, col=j)
+                fig.update_yaxes(title_text=Y_names[j-1]+" BSC [mm]", showgrid=True, zeroline=True, row=i, col=j)
+
+        # Update fig height
+        fig.update_layout(height=800)
+
+        return fig
+
+    def report_mode(self, inst):
+        if isinstance(inst, object):
+            del(inst)
+            
+        _rr = reportfiles.ReportCreator()
+        
+        _rr.machine_variables(self.electron_energy, self.avg_current,
+                              self.Circum, self.Bunches, self.sigma_z,
+                              self.nat_emittance, self.coupling_cte,
+                              self.energy_spread, self.beta_x,
+                              self.beta_y, self.eta_x, self.eta_y)
+
+        _rr.str_ring_cal(self.relative_energy, self.emission_angle,
+                         self.emittance_horizontal_x, self.emittance_vertical_y,
+                         self.source_size_x, self.source_size_y,
+                         self.source_divergence_x, self.source_divergence_y)
+
+        _rr.undulator_enter(self.gap_value, self.magnetic_field,
+                            self.periodic_length, self.device_lenght)
+
+        _rr.undulator_results(self.deflection_parameter_K, self.wavelength_first_harm, self.first_photon_energy,
+                              self.power_undulator, self.angular_power, self.undulator_spectral_flux, self.first_photon_flux,
+                              self.undu_size_n1, self.undu_divergence_n1, self.effec_size_x, self.effec_size_y, self.effec_diver_x,
+                              self.effec_diver_y, self.bright_undulator_n1)
+
+        import glob
+        directory=os.path.dirname(os.path.abspath(__file__))
+        os.chdir(directory)
+        files=glob.glob('*.pdf')
+        for filename in files:
+            os.unlink(filename)
+
+        _rr.create_pdf()
