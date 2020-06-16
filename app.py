@@ -2,6 +2,8 @@ import time
 import os
 import dash
 import base64
+import flask
+from flask import Flask
 import dash_core_components as dcc
 import dash_html_components as html
 import plotly.graph_objects as go
@@ -13,14 +15,11 @@ import data_for_dash
 
 _dd = data_for_dash.manupilation_data()
 
-#_rr = reportfiles.ReportCreator()
-
 # External Style datasheet
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
+#server = Flask(__name__)
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
-#mathjax = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.4/MathJax.js?config=TeX-MML-AM_CHTML'
-#app.scripts.append_script({ 'external_url' : mathjax })
 
 server = app.server
 
@@ -51,6 +50,10 @@ low_beta_phaseII = {
     'espread': 0.00084358942070141   
     }
 
+model_undu = {
+    'D22' : [7.5, 0.96, 22.0, 1.2],
+    'D52' : [13.6, 1.2 , 52.5, 2.4],    
+    }
 
 image_filename = os.path.dirname(os.path.abspath(__file__))+'//images//LNLS_sem_fundo.png'
 encoded_image = base64.b64encode(open(image_filename, 'rb').read())
@@ -64,14 +67,6 @@ app.layout = html.Div(style={'backgroundColor': colors['background']}, children=
         'textAlign': 'left',
         'color': colors['text']
         }),
-    
-##    dcc.Markdown('''
-##    > - **Energy:** 0.1 - 2.5 keV;
-##    > - **Type:** Delta;
-##    > - **Period (mm):** 52.5;
-##    > - **Length (m):** 2.4;
-##    > - **Kmax:** 5.88
-##    '''),
 
     html.Div([ #Open general Div combo boxes
         html.Div([
@@ -176,7 +171,16 @@ app.layout = html.Div(style={'backgroundColor': colors['background']}, children=
         ],style={'textAlign': 'center','width': '100%', 'float': 'center', 'color': colors['text']}),
 
     html.Div([ # Open Undulator Div
-        html.Div([  
+        html.Div([
+            html.H6('Undulator type'),
+            dcc.Dropdown(id='undu-type', 
+                options=[
+                    {'label': 'Delta 22.0', 'value': 'D22'},
+                    {'label': 'Delta 52.0', 'value': 'D52'}
+                ],
+                value='D52'
+                ),
+            
             html.H6('Gap value (mm)'),
             dcc.Input(id='gap_value', placeholder='Enter a value...', value = 13.6, type='number'
             ),
@@ -253,13 +257,12 @@ app.layout = html.Div(style={'backgroundColor': colors['background']}, children=
 
         ]),
     
-    html.H6('Save results in PDF', style={'textAlign': 'center','width': '100%', 'float': 'center'}),
+    html.H6('Save results', style={'textAlign': 'center','width': '100%', 'float': 'center'}),
     html.Div([ # Open general div for button to export
         html.Div([
             html.Button('Create Report', id='report-call', n_clicks=0, value='True')
             ], style={'textAlign': 'center','width': '100%', 'float': 'center'})
-            #_dd.report_mode(value)
-        
+                    
         ] + [html.Div(id='container-button-timestamp')])
 
 ]) #Close app.layout
@@ -286,7 +289,18 @@ def refesh_tabs2(value):
        _values =  list(low_beta_phaseI.values())
     elif value == 'phase2':
         _values = list(low_beta_phaseII.values())
-    return _values[0], _values[1], _values[2], _values[3], _values[4] 
+    return _values[0], _values[1], _values[2], _values[3], _values[4]
+
+@app.callback(
+    [Output('gap_value', 'value'),
+     Output('magnetic_field', 'value'),
+     Output('periodic_length', 'value'),
+     Output('device_length', 'value')],
+    [Input('undu-type', 'value')]
+    )
+def refresh_undu_type(value):
+    _values = model_undu[value]
+    return _values[0], _values[1], _values[2], _values[3]
 
 
 @app.callback(
@@ -354,7 +368,14 @@ def refresh_save(n_clicks):
         # Create pdf file
         if n_clicks > 0:
             _dd.report_mode(_rr)
-    return msg
+            
+@server.route('/external_file/<path:path>')
+def serve_static(path):
+    root_dir = os.path.dirname(os.path.abspath(__file__))#+'//external_file'
+    return flask.send_from_directory(
+        os.path.join(root_dir, 'external_file'), path
+##    return flask.send_from_directory(root_dir, path
+    )
 
 
 #Callback for graph

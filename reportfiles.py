@@ -27,8 +27,9 @@ class ReportCreator(object):
         self.text_4 = ['4.0 - Undulator Radiation Output (theta=0)']
 
         self.image = 'LNLS_sem_fundo.png'
-
-        self.pdf = canvas.Canvas(self.datetime() + self.filename)
+        
+        self.outfilepath = os.path.join(os.path.dirname(os.path.abspath(__file__))+'//external_file//'+self.datetime()+self.filename)
+        self.pdf = canvas.Canvas(self.outfilepath)
           
         
     def machine_variables(self, electron_energy, avg_current, Circum, Bunches, sigma_z,
@@ -125,7 +126,7 @@ class ReportCreator(object):
         self.pdf.drawString(10,800, 'y800')
 
     def datetime(self):
-        return strftime("%Y-%m-%d %H_%M_%S", gmtime())
+        return strftime("%Y-%m-%d_%H_%M_%S_", gmtime())
         
     def create_pdf(self):
         self.pdf.setTitle(self.documentTitle)              # Document name.pdf
@@ -170,6 +171,10 @@ class ReportCreator(object):
     def save_file(self):
         self.pdf.showPage()
         self.pdf.save()
+        relative_filename = os.path.join(
+        'external_file',
+        self.datetime() + self.filename)
+        return '/{}'.format(relative_filename)
 
     def drawimage(self, image, x, y):
         return self.pdf.drawInlineImage(image, x, y)

@@ -10,7 +10,6 @@ from plotly.subplots import make_subplots
 from scipy.special import jv
 import reportfiles
 
-##_rr = reportfiles.ReportCreator()
 
 class manupilation_data(object):
     def __init__(self):
@@ -442,7 +441,7 @@ class manupilation_data(object):
                               self.effec_diver_y, self.bright_undulator_n1)
 
         import glob
-        directory=os.path.dirname(os.path.abspath(__file__))
+        directory=os.path.dirname(os.path.abspath(__file__))+'//external_file'
         os.chdir(directory)
         files=glob.glob('*.pdf')
         for filename in files:
