@@ -3,7 +3,7 @@ import os
 import dash
 import base64
 import flask
-from flask import Flask
+from time import gmtime, strftime
 import dash_core_components as dcc
 import dash_html_components as html
 import plotly.graph_objects as go
@@ -18,7 +18,6 @@ _dd = data_for_dash.manupilation_data()
 # External Style datasheet
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
-#server = Flask(__name__)
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 
 server = app.server
@@ -260,8 +259,10 @@ app.layout = html.Div(style={'backgroundColor': colors['background']}, children=
     html.H6('Save results', style={'textAlign': 'center','width': '100%', 'float': 'center'}),
     html.Div([ # Open general div for button to export
         html.Div([
-            html.Button('Create Report', id='report-call', n_clicks=0, value='True')
-            ], style={'textAlign': 'center','width': '100%', 'float': 'center'})
+            html.Button('Create Report', id='report-call', n_clicks=0, value='True')], style={'textAlign': 'center','width': '100%'}),
+        html.Div([
+            html.A(id='download-link', children='Download File')
+            ], style={'textAlign': 'center','width': '100%', 'display': 'inline-block'})
                     
         ] + [html.Div(id='container-button-timestamp')])
 
@@ -355,28 +356,31 @@ def update_tab(vals):
     time.sleep(0.05)
     return _dd.dataframe_all()
 
-#Callback save image
+#Callback save report
 @app.callback(
-    Output(component_id='container-button-timestamp', component_property='children'),
-    [Input(component_id='report-call', component_property='n_clicks')]
+    Output('download-link','href'),
+    [Input('report-call', 'value'),
+     Input('report-call', 'n_clicks')]
     )
-def refresh_save(n_clicks):
-    changed_id = [p['prop_id'] for p in dash.callback_context.triggered][0]
-    if 'report-call' in changed_id:
-        msg = 'Report file saved'
-        time.sleep(0.1)
-        # Create pdf file
-        if n_clicks > 0:
-            _dd.report_mode(_rr)
-            
-@server.route('/external_file/<path:path>')
-def serve_static(path):
-    root_dir = os.path.dirname(os.path.abspath(__file__))#+'//external_file'
-    return flask.send_from_directory(
-        os.path.join(root_dir, 'external_file'), path
-##    return flask.send_from_directory(root_dir, path
-    )
+def refresh_save(value, n_clicks):
+    _filename = "my_undulator_report.pdf"
+    _datetime = strftime("%Y-%m-%d_", gmtime())
+    
+    if value == 'True' and n_clicks > 0:
 
+        _dd.report_mode(_rr)
+    
+    relative_filename = os.path.join(
+        'external_file',
+        _datetime + _filename)
+    
+    return '/{}'.format(relative_filename)
+            
+@app.server.route('/external_file/<path:path>')
+def serve_static(path):
+    return flask.send_from_directory(
+        os.path.dirname(os.path.abspath(__file__))+'//external_file', path
+    )
 
 #Callback for graph
 @app.callback(

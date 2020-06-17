@@ -11,7 +11,7 @@ import numpy as np
 class ReportCreator(object):
     def __init__(self):
         '''Requirements''' 
-        self.filename = " my_undulator_report.pdf"
+        self.filename = "my_undulator_report.pdf"
         self.documentTitle = "Undulator pameters Calculus"
         self.title = 'Report Undulator Parameters Maths'
         self.subTitle = ''
@@ -126,7 +126,7 @@ class ReportCreator(object):
         self.pdf.drawString(10,800, 'y800')
 
     def datetime(self):
-        return strftime("%Y-%m-%d_%H_%M_%S_", gmtime())
+        return strftime("%Y-%m-%d_", gmtime())
         
     def create_pdf(self):
         self.pdf.setTitle(self.documentTitle)              # Document name.pdf
